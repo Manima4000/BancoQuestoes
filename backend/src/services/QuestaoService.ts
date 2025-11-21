@@ -7,8 +7,8 @@ interface IQuestaoInput {
     enunciado: string;
     materia: string;
     is_multiple_choice: boolean;
-    tipo: 'Exatas' | 'Humanas' | 'Biológicas';
     assuntos: string[];
+    topicos: string[];
     gabarito: string;
     dificuldade: 'Fácil' | 'Médio' | 'Difícil';
     origem?: {

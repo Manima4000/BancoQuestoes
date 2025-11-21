@@ -1,13 +1,13 @@
 import mongoose, { Document } from 'mongoose';
 
 export interface IQuestao extends Document {
-    enunciado: string;
+    enunciado: IBlocoEnunciado[];
     materia: string;
     is_multiple_choice: boolean; 
-    tipo: 'Exatas' | 'Humanas' | 'Biológicas';
     assuntos: string[];
+    topicos: string[];
     gabarito: string; 
-    dificuldade: 'Fácil' | 'Médio' | 'Difícil';
+    dificuldade: 'Fácil' | 'Médio' | 'Difícil' | 'Muito Difícil';
     origem?: {
         tipo?: 'Vestibular' | 'Livro' | 'Simulado' | 'Outro'; 
         nome_fonte?: string; 

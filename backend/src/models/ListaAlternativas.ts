@@ -5,7 +5,7 @@ const ListaAlternativasSchema: Schema = new Schema({
     alternativas: [{
         letra: { type: String, required: true }, // Ex: "A"
         texto: { type: String, required: true }, // Ex: "Zero"
-        _id: false // 👈 Importante: Não cria ID para cada item interno, pois já estão empacotados
+        _id: false
     }]
 }, { timestamps: true });
 

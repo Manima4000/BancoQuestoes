@@ -2,11 +2,16 @@ import mongoose, { Schema } from 'mongoose';
 import { IQuestao } from '../interfaces/IQuestao';
 
 const QuestaoSchema: Schema = new Schema({
-    enunciado: { type: String, required: true },
+    enunciado: [{
+        tipo: { type: String, required: true, enum: ['texto', 'imagem'] },
+        conteudo: { type: String, required: true }, // Texto ou URL da imagem
+        legenda: { type: String }, //Legenda para imagem
+        _id: false 
+    }],
     materia: { type: String, required: true },
     is_multiple_choice: { type: Boolean, required: true },
-    tipo: { type: String, required: true },
     assuntos: { type: [String], required: true },
+    topicos: { type: [String], required: true },
     gabarito: { type: String, required: true },
     dificuldade: { type: String, required: true },
     origem: {
