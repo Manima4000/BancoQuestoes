@@ -14,13 +14,6 @@ export interface IAlternativa {
     correta: boolean;
 }
 
-// Origem da questão
-export interface IOrigem {
-    tipo: 'vestibular' | 'enem' | 'concurso' | 'olimpiada' | 'propria' | 'outro';
-    nome?: string;      // Ex: "FUVEST", "ENEM 2023"
-    ano?: number;
-}
-
 // Interface principal da Questão
 export interface IQuestao extends Document {
     // === CAMPOS PREENCHIDOS PELO PROFESSOR ===
@@ -31,14 +24,14 @@ export interface IQuestao extends Document {
     topico_id?: Types.ObjectId;             // Tópico específico (opcional)
 
     tipo: 'multipla_escolha' | 'discursiva' | 'verdadeiro_falso';
-    dificuldade: 'facil' | 'media' | 'dificil';
+    dificuldade: 'facil' | 'media' | 'dificil' | 'muito_dificil';
 
     texto_base_id?: Types.ObjectId;         // Texto de apoio (opcional)
 
     alternativas?: IAlternativa[];          // Apenas para questões objetivas
     gabarito: string;                       // Letra (A-E) ou texto para discursiva
 
-    origem: IOrigem;
+    origem_id?: Types.ObjectId;             // Referência à origem (opcional)
 
     // === CAMPOS GERADOS PELO SISTEMA (detecção de duplicatas) ===
 
@@ -60,7 +53,7 @@ export interface IQuestaoInput {
     texto_base_id?: string;
     alternativas?: IAlternativa[];
     gabarito: string;
-    origem: IOrigem;
+    origem_id?: string;                     // ID da origem (opcional)
 }
 
 // Interface para resultado de similaridade
@@ -75,8 +68,8 @@ export interface IQuestaoFilters {
     assunto_ids?: string[];
     topico_id?: string;
     tipo?: 'multipla_escolha' | 'discursiva' | 'verdadeiro_falso';
-    dificuldade?: 'facil' | 'media' | 'dificil';
-    origem_tipo?: string;
+    dificuldade?: 'facil' | 'media' | 'dificil' | 'muito_dificil';
+    origem_id?: string;
     search?: string;
 }
 

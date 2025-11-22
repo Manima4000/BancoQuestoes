@@ -44,7 +44,7 @@ export class QuestaoController {
             if (req.query.topico_id) filters.topico_id = req.query.topico_id as string;
             if (req.query.tipo) filters.tipo = req.query.tipo as any;
             if (req.query.dificuldade) filters.dificuldade = req.query.dificuldade as any;
-            if (req.query.origem_tipo) filters.origem_tipo = req.query.origem_tipo as string;
+            if (req.query.origem_id) filters.origem_id = req.query.origem_id as string;
             if (req.query.search) filters.search = req.query.search as string;
 
             const resultado = await questaoService.find(filters, pagination);

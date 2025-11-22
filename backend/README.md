@@ -9,6 +9,8 @@ API REST para gerenciamento de banco de questões educacionais. Permite que prof
 - **MongoDB** + **Mongoose** - Banco de dados
 - **Jest** - Testes automatizados
 - **Sharp** - Processamento de imagens
+- **Swagger** - Documentação da API
+- **Google Generative AI** - Análise de PDFs com IA
 
 ## Instalação
 
@@ -25,7 +27,10 @@ cp .env.example .env
 
 ```env
 MONGODB_URI=mongodb://localhost:27017/banco_questoes
-PORT=3000
+PORT=3001
+GEMINI_API_KEY=sua_chave_aqui
+MATHPIX_APP_ID=seu_app_id
+MATHPIX_APP_KEY=sua_chave
 ```
 
 ## Scripts
@@ -36,16 +41,17 @@ npm run build        # Compilar TypeScript
 npm start            # Produção
 npm test             # Rodar testes
 
-npm run seed         # Popular banco (matérias + assuntos)
+npm run seed             # Popular banco (matérias + assuntos + origens)
 npm run seed:materias    # Apenas matérias
 npm run seed:assuntos    # Apenas assuntos
+npm run seed:origens     # Apenas origens
 ```
 
 ## Estrutura do Projeto
 
 ```
 src/
-├── config/          # Configurações (upload, rate limit)
+├── config/          # Configurações (upload, rate limit, swagger)
 ├── controllers/     # Controladores das rotas
 ├── interfaces/      # Interfaces TypeScript
 ├── models/          # Schemas Mongoose
@@ -57,6 +63,15 @@ src/
 
 tests/               # Testes automatizados
 ```
+
+---
+
+## Documentação Swagger
+
+A API possui documentação interativa via Swagger UI.
+
+- **Swagger UI**: `http://localhost:3001/api-docs`
+- **JSON Spec**: `http://localhost:3001/api-docs.json`
 
 ---
 
@@ -76,6 +91,20 @@ tests/               # Testes automatizados
 | `GET` | `/api/questoes/estatisticas` | Estatísticas do banco |
 | `GET` | `/api/questoes/aleatorias` | Questões aleatórias |
 | `GET` | `/api/questoes/contagem` | Contagem com filtros |
+
+### Origens
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/api/origens` | Criar origem |
+| `GET` | `/api/origens` | Listar todas (com filtros) |
+| `GET` | `/api/origens/:id` | Buscar por ID |
+| `GET` | `/api/origens/tipo/:tipo` | Listar por tipo |
+| `GET` | `/api/origens/:id/questoes/count` | Contar questões vinculadas |
+| `GET` | `/api/origens/estatisticas` | Estatísticas |
+| `PUT` | `/api/origens/:id` | Atualizar |
+| `DELETE` | `/api/origens/:id` | Desativar (soft delete) |
+| `DELETE` | `/api/origens/:id/permanente` | Remover permanentemente |
 
 ### Matérias
 
@@ -119,6 +148,22 @@ tests/               # Testes automatizados
 | `PUT` | `/api/textos-base/:id` | Atualizar |
 | `DELETE` | `/api/textos-base/:id` | Remover |
 
+### Listas de Exercícios
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/api/listas-exercicios` | Criar lista |
+| `GET` | `/api/listas-exercicios` | Listar todas |
+| `GET` | `/api/listas-exercicios/:id` | Buscar por ID |
+| `PUT` | `/api/listas-exercicios/:id` | Atualizar |
+| `DELETE` | `/api/listas-exercicios/:id` | Remover |
+
+### Analyzer (PDF com IA)
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| `POST` | `/api/analyzer/analyze` | Analisar PDF e extrair questões |
+
 ---
 
 ## Modelos
@@ -134,17 +179,13 @@ tests/               # Testes automatizados
   assunto_ids: ObjectId[],        // Pode ter múltiplos assuntos
   topico_id?: ObjectId,           // Opcional
   tipo: 'multipla_escolha' | 'discursiva' | 'verdadeiro_falso',
-  dificuldade: 'facil' | 'media' | 'dificil',
+  dificuldade: 'facil' | 'media' | 'dificil' | 'muito_dificil',
   texto_base_id?: ObjectId,       // Opcional
   alternativas?: [
     { letra: 'A'-'E', conteudo: string, correta: boolean }
   ],
   gabarito: string,               // Letra ou texto
-  origem: {
-    tipo: 'vestibular' | 'enem' | 'concurso' | 'olimpiada' | 'propria' | 'outro',
-    nome?: string,
-    ano?: number
-  },
+  origem_id?: ObjectId,           // Referência à origem (opcional)
 
   // Campos do sistema (automáticos)
   conteudo_hash: string,          // Detecção de duplicatas
@@ -152,6 +193,18 @@ tests/               # Testes automatizados
   ativa: boolean,
   criado_em: Date,
   atualizado_em: Date
+}
+```
+
+### Origem
+
+```typescript
+{
+  tipo: 'vestibular' | 'enem' | 'concurso' | 'olimpiada' | 'livro' | 'simulado' | 'propria' | 'outro',
+  nome: string,                   // Ex: "FUVEST", "ITA", "Halliday"
+  ano?: number,                   // Ano da prova/edição
+  informacoes_adicionais?: string, // Ex: "1ª Fase", "Capítulo 5"
+  ativa: boolean
 }
 ```
 
@@ -195,6 +248,20 @@ tests/               # Testes automatizados
 
 ## Exemplos de Uso
 
+### Criar Origem
+
+```bash
+POST /api/origens
+Content-Type: application/json
+
+{
+  "tipo": "vestibular",
+  "nome": "FUVEST",
+  "ano": 2024,
+  "informacoes_adicionais": "1ª Fase"
+}
+```
+
 ### Criar Questão de Múltipla Escolha
 
 ```bash
@@ -215,7 +282,7 @@ Content-Type: application/json
     { "letra": "D", "conteudo": "Salvador", "correta": false }
   ],
   "gabarito": "C",
-  "origem": { "tipo": "propria" }
+  "origem_id": "6750a1b2c3d4e5f6a7b8c9d1"
 }
 ```
 
@@ -233,7 +300,7 @@ Content-Type: application/json
   "tipo": "discursiva",
   "dificuldade": "media",
   "gabarito": "A fotossíntese é o processo pelo qual plantas convertem luz solar, água e CO2 em glicose e oxigênio.",
-  "origem": { "tipo": "enem", "nome": "ENEM", "ano": 2023 }
+  "origem_id": "6750a1b2c3d4e5f6a7b8c9d2"
 }
 ```
 
@@ -258,14 +325,14 @@ Content-Type: application/json
     { "letra": "C", "conteudo": "20", "correta": false }
   ],
   "gabarito": "B",
-  "origem": { "tipo": "vestibular", "nome": "FUVEST", "ano": 2022 }
+  "origem_id": "6750a1b2c3d4e5f6a7b8c9d3"
 }
 ```
 
 ### Listar Questões com Filtros
 
 ```bash
-GET /api/questoes?page=1&limit=20&tipo=multipla_escolha&dificuldade=media&assunto_ids=123
+GET /api/questoes?page=1&limit=20&tipo=multipla_escolha&dificuldade=media&origem_id=123
 ```
 
 ### Verificar Similaridade Antes de Criar
@@ -285,6 +352,22 @@ Content-Type: application/json
   "questoesSimilares": [
     { "questao_id": "...", "similaridade": 95, "tipo_match": "texto_similar" }
   ]
+}
+```
+
+### Analisar PDF com IA
+
+```bash
+POST /api/analyzer/analyze
+Content-Type: multipart/form-data
+
+file: [arquivo.pdf]
+
+# Resposta
+{
+  "message": "Análise concluída com sucesso.",
+  "total_questoes": 10,
+  "rascunho": [...]
 }
 ```
 
@@ -324,12 +407,29 @@ Matemática, Português, Física, Química, Biologia, História, Geografia, Ingl
 ### Assuntos (107)
 Cada matéria possui de 8 a 11 assuntos pré-cadastrados cobrindo os principais tópicos de vestibular.
 
+### Origens (90+)
+**Vestibulares Militares:** IME, ITA, AFA, ESA, EFOMM, EsPCEx, EN, EPCAR, Colégio Naval, EAM
+
+**ENEM**
+
+**Vestibulares Tradicionais:** FUVEST, UNICAMP, UNESP, UERJ, UFF, UFRJ, UFMG, UFPR, UFRGS, UFSC, UFG, UFBA, UFPE, UFC, UnB, UFES, UNIFESP, UFSCar
+
+**Vestibulares Particulares:** PUC-SP, PUC-RJ, PUC-MG, PUC-RS, PUC-PR, Mackenzie, FGV, INSPER, ESPM, Einstein, Santa Casa
+
+**Olimpíadas:** OBM, OBF, OBQ, OBI, OBA, OBMEP, OBB, ONHB, OBR
+
+**Concursos:** Colégio Pedro II, CAp UERJ, CEFET, IFSP, IFRJ, IFMG
+
+**Livros Didáticos:** Halliday, Tipler, Sears & Zemansky, Serway, Guidorizzi, Stewart, Leithold, Atkins, Feltre, Usberco & Salvador, FME, Dante, Iezzi
+
+**Simulados:** Poliedro, Objetivo, Anglo, Etapa, Bernoulli, SAS, COC
+
 ```bash
 # Popular tudo
 npm run seed
 
-# Ver assuntos de uma matéria específica
-GET /api/assuntos/materia/:materiaId
+# Ver origens por tipo
+GET /api/origens/tipo/vestibular
 ```
 
 ---
@@ -346,6 +446,7 @@ npm test
 # - Paginação e filtros
 # - CRUD completo
 # - Estatísticas
+# - Entidade Origem
 ```
 
 ---

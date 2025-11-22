@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { seedMaterias } from './materias.seed';
 import { seedAssuntos } from './assuntos.seed';
+import { seedOrigens } from './origens.seed';
 
 dotenv.config();
 
@@ -30,8 +31,7 @@ async function runAllSeeds() {
 
     await seedMaterias();
     await seedAssuntos();
-    // Adicionar outros seeds aqui conforme forem criados:
-    // await seedTopicos();
+    await seedOrigens();
 
     console.log('\n' + '='.repeat(50));
     console.log('SEEDS FINALIZADOS COM SUCESSO!');
@@ -51,6 +51,9 @@ async function main() {
                 break;
             case 'assuntos':
                 await seedAssuntos();
+                break;
+            case 'origens':
+                await seedOrigens();
                 break;
             case 'all':
             default:
