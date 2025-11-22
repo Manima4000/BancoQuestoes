@@ -1,31 +1,46 @@
 import { Request, Response } from 'express';
-import AnalysisPDFService from '../services/AnalysisPDFService'; // 👈 Importando o novo service
 import fs from 'fs';
+import MathpixService from '../services/MathpixService';
+import GeminiParserService from '../services/GeminiParserService';
 
 export const analyzePdf = async (req: Request, res: Response) => {
-    if (!req.file) return res.status(400).json({ error: 'Envie um PDF.' });
+    // 1. Validação Básica
+    if (!req.file) {
+        return res.status(400).json({ error: 'Envie um arquivo PDF.' });
+    }
 
     try {
-        const rascunho = await AnalysisPDFService.analyzePdfAndDraftQuestions(req.file.path);
+        console.log(`🚀 [Analyzer] Iniciando processamento do arquivo: ${req.file.originalname}`);
+
+        console.log("1️⃣  Enviando para Mathpix...");
+        const markdownResult = await MathpixService.convertPdfToMarkdown(req.file.path);
+        
+        console.log("2️⃣  Enviando para Gemini estruturar...");
+        const questoesEstruturadas = await GeminiParserService.parseMarkdownToQuestions(markdownResult);
 
         if (fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
 
-        res.json({ 
-            message: 'Análise concluída com sucesso.', 
-            rascunho: rascunho 
+        console.log(`✅ [Analyzer] Sucesso! ${questoesEstruturadas.length} questões identificadas.`);
+
+        return res.json({
+            message: 'Análise concluída com sucesso.',
+            total_questoes: questoesEstruturadas.length,
+            rascunho: questoesEstruturadas
         });
 
     } catch (error: any) {
-        // Garante limpeza em caso de erro
         if (fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
+
+        console.error("❌ [Analyzer] Erro fatal:", error.message);
         
-        res.status(500).json({ 
-            message: 'Erro ao analisar PDF.',
-            error: error.message 
+        return res.status(500).json({ 
+            message: 'Erro ao processar o documento.',
+            error: error.message,
+            details: error.response?.data || "Sem detalhes externos"
         });
     }
 };

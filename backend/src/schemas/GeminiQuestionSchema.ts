@@ -11,7 +11,7 @@ export const geminiQuestionSchema = {
                 items: {
                     type: SchemaType.OBJECT,
                     properties: {
-                        tipo: { type: SchemaType.STRING, enum: ["texto", "imagem_pendente"] },
+                        tipo: { type: SchemaType.STRING, enum: ["texto", "imagem_pendente", "imagem"] },
                         conteudo: { type: SchemaType.STRING },
                         legenda: { type: SchemaType.STRING, nullable: true }
                     },
@@ -42,8 +42,14 @@ export const geminiQuestionSchema = {
                     type: SchemaType.OBJECT,
                     properties: {
                         letra: { type: SchemaType.STRING },
-                        texto: { type: SchemaType.STRING }
-                    }
+                        // A IA deve marcar como "imagem_pendente" se não for texto
+                        tipo: { 
+                            type: SchemaType.STRING, 
+                            enum: ["texto", "imagem_pendente"] 
+                        },
+                        conteudo: { type: SchemaType.STRING }
+                    },
+                    required: ["letra", "tipo", "conteudo"]
                 }
             },
             origem: {

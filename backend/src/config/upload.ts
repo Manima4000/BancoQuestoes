@@ -25,11 +25,9 @@ export const upload = multer({
 // ==========================================
 const storageDisk = multer.diskStorage({
     destination: (req, file, cb) => {
-        // Salva temporariamente na pasta uploads
         cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
-        // Cria um nome único para não dar conflito
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, `temp-pdf-${uniqueSuffix}.pdf`);
     }

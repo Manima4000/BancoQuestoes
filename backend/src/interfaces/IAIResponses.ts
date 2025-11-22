@@ -4,6 +4,12 @@ export interface IAiBlocoEnunciado {
     legenda?: string;
 }
 
+export interface IAiBlocoAlternativa {
+    letra: string;
+    tipo: 'texto' | 'imagem_pendente';
+    conteudo: string;
+}
+
 export interface IAiQuestaoRascunho {
     enunciado: IAiBlocoEnunciado[];
     materia?: string;
@@ -11,5 +17,5 @@ export interface IAiQuestaoRascunho {
     is_multiple_choice: boolean;
     dificuldade?: 'Fácil' | 'Médio' | 'Difícil' | 'Muito Difícil';
     gabarito?: string;
-    alternativas?: { letra: string; texto: string }[];
+    alternativas?: IAiBlocoAlternativa
 }

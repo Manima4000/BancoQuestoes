@@ -1,6 +1,7 @@
 import { Document } from 'mongoose';
 
 export interface IAlternativa extends Document {
-    texto: string; 
     letra: string; 
+    tipo: 'texto' | 'imagem';
+    conteudo: string;
 }

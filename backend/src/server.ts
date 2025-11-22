@@ -6,8 +6,7 @@ import path from 'path';
 import { limiter } from './config/limiter';
 
 import questaoRoutes from './routes/questaoRoutes'; 
-import uploadRoutes from './routes/uploadRoutes';
-import analyserRoutes from './routes/AnalyzerRoutes';
+import analyzerRoutes from './routes/analyzerRoutes';
 
 dotenv.config();
 connectDB();
@@ -22,8 +21,7 @@ app.use('/api/', limiter);
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use('/api/questoes', questaoRoutes); 
-app.use('/api/upload', uploadRoutes);
-app.use('/api/analyzer', analyserRoutes);
+app.use('/api/analyzer', analyzerRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
