@@ -1,6 +1,7 @@
 import { QuestaoService } from '../src/services/QuestaoService';
 import Assunto from '../src/models/AssuntoSchema';
 import Materia from '../src/models/MateriaSchema';
+import Origem from '../src/models/OrigemSchema';
 import { IQuestaoInput } from '../src/interfaces/IQuestao';
 
 const questaoService = new QuestaoService();
@@ -18,11 +19,20 @@ const criarDadosBase = async () => {
         materia_id: materia._id,
     });
 
-    return { materiaId: materia._id.toString(), assuntoId: assunto._id.toString() };
+    const origem = await Origem.create({
+        tipo: 'propria',
+        nome: 'Questão própria',
+    });
+
+    return {
+        materiaId: materia._id.toString(),
+        assuntoId: assunto._id.toString(),
+        origemId: origem._id.toString()
+    };
 };
 
 // Helper para criar questão base
-const criarQuestaoBase = (assuntoId: string, overrides = {}): IQuestaoInput => ({
+const criarQuestaoBase = (assuntoId: string, origemId?: string, overrides = {}): IQuestaoInput => ({
     enunciado: [
         { tipo: 'texto', conteudo: 'Qual é a capital do Brasil?', ordem: 1 }
     ],
@@ -36,7 +46,7 @@ const criarQuestaoBase = (assuntoId: string, overrides = {}): IQuestaoInput => (
         { letra: 'D', conteudo: 'Salvador', correta: false },
     ],
     gabarito: 'C',
-    origem: { tipo: 'propria' },
+    origem_id: origemId,
     ...overrides,
 });
 
@@ -44,16 +54,16 @@ describe('QuestaoService', () => {
 
     describe('Validação por Tipo', () => {
         test('Múltipla escolha: deve rejeitar sem alternativas', async () => {
-            const { assuntoId } = await criarDadosBase();
-            const questao = criarQuestaoBase(assuntoId, { alternativas: [] });
+            const { assuntoId, origemId } = await criarDadosBase();
+            const questao = criarQuestaoBase(assuntoId, origemId, { alternativas: [] });
 
             await expect(questaoService.create(questao, false))
                 .rejects.toThrow('pelo menos 2 alternativas');
         });
 
         test('Múltipla escolha: deve aceitar questão válida', async () => {
-            const { assuntoId } = await criarDadosBase();
-            const questao = criarQuestaoBase(assuntoId);
+            const { assuntoId, origemId } = await criarDadosBase();
+            const questao = criarQuestaoBase(assuntoId, origemId);
 
             const result = await questaoService.create(questao, false);
             expect(result).toBeDefined();
@@ -61,8 +71,8 @@ describe('QuestaoService', () => {
         });
 
         test('Múltipla escolha: deve rejeitar sem alternativa correta', async () => {
-            const { assuntoId } = await criarDadosBase();
-            const questao = criarQuestaoBase(assuntoId, {
+            const { assuntoId, origemId } = await criarDadosBase();
+            const questao = criarQuestaoBase(assuntoId, origemId, {
                 alternativas: [
                     { letra: 'A', conteudo: 'A', correta: false },
                     { letra: 'B', conteudo: 'B', correta: false },
@@ -74,8 +84,8 @@ describe('QuestaoService', () => {
         });
 
         test('Verdadeiro/Falso: deve aceitar com 2 alternativas', async () => {
-            const { assuntoId } = await criarDadosBase();
-            const questao = criarQuestaoBase(assuntoId, {
+            const { assuntoId, origemId } = await criarDadosBase();
+            const questao = criarQuestaoBase(assuntoId, origemId, {
                 tipo: 'verdadeiro_falso',
                 enunciado: [{ tipo: 'texto', conteudo: 'O Brasil é grande?', ordem: 1 }],
                 alternativas: [
@@ -90,8 +100,8 @@ describe('QuestaoService', () => {
         });
 
         test('Discursiva: deve aceitar sem alternativas', async () => {
-            const { assuntoId } = await criarDadosBase();
-            const questao = criarQuestaoBase(assuntoId, {
+            const { assuntoId, origemId } = await criarDadosBase();
+            const questao = criarQuestaoBase(assuntoId, origemId, {
                 tipo: 'discursiva',
                 enunciado: [{ tipo: 'texto', conteudo: 'Explique a fotossíntese.', ordem: 1 }],
                 alternativas: undefined,
@@ -103,8 +113,8 @@ describe('QuestaoService', () => {
         });
 
         test('Discursiva: deve rejeitar com alternativas', async () => {
-            const { assuntoId } = await criarDadosBase();
-            const questao = criarQuestaoBase(assuntoId, {
+            const { assuntoId, origemId } = await criarDadosBase();
+            const questao = criarQuestaoBase(assuntoId, origemId, {
                 tipo: 'discursiva',
                 gabarito: 'Resposta',
             });
@@ -116,15 +126,15 @@ describe('QuestaoService', () => {
 
     describe('Detecção de Duplicatas', () => {
         test('Deve detectar questão idêntica', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
-            const questao1 = criarQuestaoBase(assuntoId, {
+            const questao1 = criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Questão única para teste', ordem: 1 }],
             });
 
             await questaoService.create(questao1, false);
 
-            const questao2 = criarQuestaoBase(assuntoId, {
+            const questao2 = criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Questão única para teste', ordem: 1 }],
             });
 
@@ -133,13 +143,13 @@ describe('QuestaoService', () => {
         });
 
         test('Deve permitir questões diferentes', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
-            const questao1 = criarQuestaoBase(assuntoId, {
+            const questao1 = criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Primeira questão diferente', ordem: 1 }],
             });
 
-            const questao2 = criarQuestaoBase(assuntoId, {
+            const questao2 = criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Segunda questão totalmente distinta', ordem: 1 }],
             });
 
@@ -150,15 +160,15 @@ describe('QuestaoService', () => {
         });
 
         test('Deve verificar similaridade', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
-            const questao1 = criarQuestaoBase(assuntoId, {
+            const questao1 = criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Qual é a fórmula da água?', ordem: 1 }],
             });
 
             await questaoService.create(questao1, false);
 
-            const questao2 = criarQuestaoBase(assuntoId, {
+            const questao2 = criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Qual é a fórmula da água?', ordem: 1 }],
             });
 
@@ -170,11 +180,11 @@ describe('QuestaoService', () => {
 
     describe('Paginação', () => {
         test('Deve retornar resultados paginados', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
             // Criar 15 questões
             for (let i = 1; i <= 15; i++) {
-                await questaoService.create(criarQuestaoBase(assuntoId, {
+                await questaoService.create(criarQuestaoBase(assuntoId, origemId, {
                     enunciado: [{ tipo: 'texto', conteudo: `Questão número ${i}`, ordem: 1 }],
                 }), false);
             }
@@ -187,14 +197,14 @@ describe('QuestaoService', () => {
         });
 
         test('Deve filtrar por dificuldade', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
-            await questaoService.create(criarQuestaoBase(assuntoId, {
+            await questaoService.create(criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Questão fácil', ordem: 1 }],
                 dificuldade: 'facil',
             }), false);
 
-            await questaoService.create(criarQuestaoBase(assuntoId, {
+            await questaoService.create(criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Questão difícil', ordem: 1 }],
                 dificuldade: 'dificil',
             }), false);
@@ -204,23 +214,57 @@ describe('QuestaoService', () => {
             expect(result.data.length).toBe(1);
             expect(result.data[0].dificuldade).toBe('facil');
         });
+
+        test('Deve filtrar por origem_id', async () => {
+            const { assuntoId, origemId } = await criarDadosBase();
+
+            // Criar outra origem
+            const outraOrigem = await Origem.create({
+                tipo: 'vestibular',
+                nome: 'FUVEST',
+                ano: 2023,
+            });
+
+            await questaoService.create(criarQuestaoBase(assuntoId, origemId, {
+                enunciado: [{ tipo: 'texto', conteudo: 'Questão própria', ordem: 1 }],
+            }), false);
+
+            await questaoService.create(criarQuestaoBase(assuntoId, outraOrigem._id.toString(), {
+                enunciado: [{ tipo: 'texto', conteudo: 'Questão FUVEST', ordem: 1 }],
+            }), false);
+
+            const result = await questaoService.find({ origem_id: outraOrigem._id.toString() }, {});
+
+            expect(result.data.length).toBe(1);
+        });
     });
 
     describe('CRUD', () => {
         test('Deve criar e buscar questão', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
-            const questao = await questaoService.create(criarQuestaoBase(assuntoId), false);
+            const questao = await questaoService.create(criarQuestaoBase(assuntoId, origemId), false);
             const encontrada = await questaoService.findOne(questao._id.toString());
 
             expect(encontrada).toBeDefined();
             expect(encontrada?._id.toString()).toBe(questao._id.toString());
         });
 
-        test('Deve atualizar questão', async () => {
+        test('Deve criar questão sem origem (opcional)', async () => {
             const { assuntoId } = await criarDadosBase();
 
-            const questao = await questaoService.create(criarQuestaoBase(assuntoId), false);
+            const questao = await questaoService.create(criarQuestaoBase(assuntoId, undefined, {
+                enunciado: [{ tipo: 'texto', conteudo: 'Questão sem origem', ordem: 1 }],
+            }), false);
+
+            expect(questao).toBeDefined();
+            expect(questao.origem_id).toBeUndefined();
+        });
+
+        test('Deve atualizar questão', async () => {
+            const { assuntoId, origemId } = await criarDadosBase();
+
+            const questao = await questaoService.create(criarQuestaoBase(assuntoId, origemId), false);
 
             const atualizada = await questaoService.update(questao._id.toString(), {
                 dificuldade: 'dificil',
@@ -230,9 +274,9 @@ describe('QuestaoService', () => {
         });
 
         test('Deve desativar questão (soft delete)', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
-            const questao = await questaoService.create(criarQuestaoBase(assuntoId), false);
+            const questao = await questaoService.create(criarQuestaoBase(assuntoId, origemId), false);
             await questaoService.delete(questao._id.toString());
 
             const encontrada = await questaoService.findOne(questao._id.toString());
@@ -242,13 +286,13 @@ describe('QuestaoService', () => {
 
     describe('Auxiliares', () => {
         test('Deve contar questões', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
-            await questaoService.create(criarQuestaoBase(assuntoId, {
+            await questaoService.create(criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Q1', ordem: 1 }],
             }), false);
 
-            await questaoService.create(criarQuestaoBase(assuntoId, {
+            await questaoService.create(criarQuestaoBase(assuntoId, origemId, {
                 enunciado: [{ tipo: 'texto', conteudo: 'Q2', ordem: 1 }],
             }), false);
 
@@ -257,9 +301,9 @@ describe('QuestaoService', () => {
         });
 
         test('Deve retornar estatísticas', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
-            await questaoService.create(criarQuestaoBase(assuntoId), false);
+            await questaoService.create(criarQuestaoBase(assuntoId, origemId), false);
 
             const stats = await questaoService.getEstatisticas();
 
@@ -269,10 +313,10 @@ describe('QuestaoService', () => {
         });
 
         test('Deve retornar questões aleatórias', async () => {
-            const { assuntoId } = await criarDadosBase();
+            const { assuntoId, origemId } = await criarDadosBase();
 
             for (let i = 1; i <= 5; i++) {
-                await questaoService.create(criarQuestaoBase(assuntoId, {
+                await questaoService.create(criarQuestaoBase(assuntoId, origemId, {
                     enunciado: [{ tipo: 'texto', conteudo: `Random ${i}`, ordem: 1 }],
                 }), false);
             }

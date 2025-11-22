@@ -31,7 +31,7 @@ const QuestaoSchema: Schema = new Schema({
     dificuldade: {
         type: String,
         required: true,
-        enum: ['facil', 'media', 'dificil']
+        enum: ['facil', 'media', 'dificil','muito_dificil']
     },
 
     texto_base_id: {
@@ -52,15 +52,9 @@ const QuestaoSchema: Schema = new Schema({
 
     gabarito: { type: String, required: true },
 
-    origem: {
-        tipo: {
-            type: String,
-            required: true,
-            enum: ['vestibular', 'enem', 'concurso', 'olimpiada', 'propria', 'outro']
-        },
-        nome: { type: String },
-        ano: { type: Number },
-        _id: false
+    origem_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'Origem'
     },
 
     // === CAMPOS DO SISTEMA ===
@@ -76,7 +70,7 @@ const QuestaoSchema: Schema = new Schema({
 QuestaoSchema.index({ assunto_ids: 1 });
 QuestaoSchema.index({ topico_id: 1 });
 QuestaoSchema.index({ tipo: 1, dificuldade: 1 });
-QuestaoSchema.index({ 'origem.tipo': 1, 'origem.ano': 1 });
+QuestaoSchema.index({ origem_id: 1 });
 QuestaoSchema.index({ ativa: 1 });
 QuestaoSchema.index({ criado_em: -1 });
 

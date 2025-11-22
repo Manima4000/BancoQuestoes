@@ -186,7 +186,7 @@ export class QuestaoService {
         if (filters.topico_id) query.topico_id = filters.topico_id;
         if (filters.tipo) query.tipo = filters.tipo;
         if (filters.dificuldade) query.dificuldade = filters.dificuldade;
-        if (filters.origem_tipo) query['origem.tipo'] = filters.origem_tipo;
+        if (filters.origem_id) query.origem_id = filters.origem_id;
         if (filters.search) query.$text = { $search: filters.search };
 
         const total = await Questao.countDocuments(query);
@@ -196,6 +196,7 @@ export class QuestaoService {
             .populate('assunto_ids', 'nome slug')
             .populate('topico_id', 'nome slug')
             .populate('texto_base_id', 'titulo')
+            .populate('origem_id', 'tipo nome ano informacoes_adicionais')
             .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
             .skip((page - 1) * limit)
             .limit(limit);
@@ -210,7 +211,8 @@ export class QuestaoService {
         return await Questao.findOne({ _id: id, ativa: true })
             .populate('assunto_ids', 'nome slug')
             .populate('topico_id', 'nome slug')
-            .populate('texto_base_id');
+            .populate('texto_base_id')
+            .populate('origem_id', 'tipo nome ano informacoes_adicionais');
     }
 
     async update(id: string, data: Partial<IQuestaoInput>) {
